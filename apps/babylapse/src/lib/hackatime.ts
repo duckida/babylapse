@@ -15,6 +15,13 @@ export interface HackatimeProjectSummary {
     totalSeconds: number;
 }
 
+export interface HackatimeTokenResponse {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    token_type?: string;
+}
+
 export interface WakaTimeHeartbeat {
     entity: string;
     type: string;
@@ -37,7 +44,7 @@ class HackatimeBase {
     }
 
     protected async query<T>(method: "GET" | "POST", endpoint: string, params?: object) {
-        const response = await fetch(`https://hackatime.hackclub.com/api/${endpoint}`, {
+        const response = await fetch(`${hackatimeBaseUrl()}/api/${endpoint}`, {
             method,
             body: method === "GET" ? undefined : JSON.stringify(params ?? {}),
             headers: {
@@ -54,6 +61,10 @@ class HackatimeBase {
     }
 }
 
+function hackatimeBaseUrl() {
+    return process.env.HACKATIME_URL ?? "https://hackatime.hackclub.com";
+}
+
 export class HackatimeOAuthApi extends HackatimeBase {
     constructor(accessToken: string) {
         super(accessToken);
@@ -67,6 +78,10 @@ export class HackatimeOAuthApi extends HackatimeBase {
     async apiKey() {
         const data = await this.query<{ token: string }>("GET", "v1/authenticated/api_keys");
         return data.token;
+    }
+
+    async me() {
+        return await this.query<{ id: number }>("GET", "v1/authenticated/me");
     }
 }
 
@@ -82,6 +97,49 @@ export class HackatimeUserApi extends HackatimeBase {
             { heartbeats }
         );
     }
+}
+
+export async function exchangeOAuthCodeForTokens(params: {
+    code: string;
+    redirectUri: string;
+    codeVerifier?: string;
+}) {
+    const clientId = process.env.HACKATIME_CLIENT_ID;
+
+    if (!clientId)
+        throw new Error("Missing HACKATIME_CLIENT_ID");
+
+    const body = new URLSearchParams({
+        client_id: clientId,
+        code: params.code,
+        grant_type: "authorization_code",
+        redirect_uri: params.redirectUri
+    });
+
+    if (params.codeVerifier)
+        body.set("code_verifier", params.codeVerifier);
+
+    const clientSecret = process.env.HACKATIME_CLIENT_SECRET;
+    if (clientSecret)
+        body.set("client_secret", clientSecret);
+
+    const response = await fetch(`${hackatimeBaseUrl()}/oauth/token`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body
+    });
+
+    if (!response.ok)
+        throw new Error(`Hackatime OAuth token exchange failed with HTTP ${response.status}`);
+
+    const data = await response.json() as HackatimeTokenResponse;
+
+    if (!data.access_token)
+        throw new Error("Hackatime token response missing access_token");
+
+    return data;
 }
 
 export function sortAndMapProjects(projects: WakaTimeProject[]): HackatimeProjectSummary[] {

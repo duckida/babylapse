@@ -25,6 +25,11 @@ Create `apps/babylapse/.env.local` with:
 - `FIREBASE_CLIENT_EMAIL`
 - `FIREBASE_PRIVATE_KEY` (use escaped `\n` newlines)
 - `BABYLAPSE_UPLOAD_DIR` (optional, default: `<repo>/data/uploads`)
+- `BABYLAPSE_APP_URL` (default: `http://localhost:3000`)
+- `HACKATIME_URL` (default: `https://hackatime.hackclub.com`)
+- `HACKATIME_CLIENT_ID`
+- `HACKATIME_CLIENT_SECRET` (optional; used if your OAuth app requires it)
+- `HACKATIME_REDIRECT_URI` (default: `http://localhost:3000/auth/callback`)
 
 ## Local setup
 
@@ -58,3 +63,7 @@ Create `apps/babylapse/.env.local` with:
 5. Create Firestore composite indexes as prompted for query combinations:
    - `ownerId + hackatimeProject + createdAt desc`
    - `hackatimeUserId + hackatimeProject + createdAt desc`
+
+## OAuth callback
+
+- `GET /auth/callback` now exchanges `code` for tokens via Hackatime OAuth, fetches the authenticated Hackatime user ID, stores tokens in Firestore (`hackatimeTokens`), and then redirects to `/` with a status query param.
