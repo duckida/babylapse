@@ -39,6 +39,16 @@ Create `apps/babylapse/.env.local` with:
 3. Start app:
    - `pnpm --filter @lapse/babylapse dev`
 
+
+## UI
+
+- Open `http://localhost:3000` after running `pnpm --filter @lapse/babylapse dev`.
+- The homepage now includes a working local dashboard for:
+  - Hackatime OAuth connect (`/auth/start`)
+  - Local media upload (`POST /api/v1/storage/upload`)
+  - Timelapse creation + optional heartbeat sync
+  - Hackatime project fetch testing
+
 ## Endpoints
 
 - `GET /api/v1/hackatime/projects`
